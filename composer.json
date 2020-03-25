@@ -1,12 +1,13 @@
 {
     "name": "mantu/tp-service",
-    "description": "信息化公共服务,tp5.1.*",
+    "description": "漫涂拾光公共服务,tp5.1.*",
     "type": "n",
     "license": "MIT",
      "authors": [
         {
             "name": "W_wang",
-            "email": "1352255400@qq.com"
+            "email": "1352255400@qq.com",
+            "website": "https://www.mantulife.com"
         }
     ],
     "minimum-stability": "dev",
@@ -16,12 +17,6 @@
     "autoload": {
     	"psr-4": {
             "MantuTpService\\": "src/"
-        }
-    },
-    "repositories": {
-        "packagist": {
-            "type": "composer",
-            "url": "https://mirrors.aliyun.com/composer/"
         }
     }
 }

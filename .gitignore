@@ -2,8 +2,3 @@
 composer.lock
 *.log
 .project
-vendor/
-runtime/
-thinkphp/
-public/uploads/
-.gitlab-ci.yml

@@ -2,9 +2,8 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use ImsCommonService\BaseModel;
+use MantuTpService\BaseModel;
 
 // echo CommonService::d();die;
 
 $BaseModel = new BaseModel();
-echo $BaseModel->joinType;

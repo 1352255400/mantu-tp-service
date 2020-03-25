@@ -1,83 +1,58 @@
 <?php
 
-namespace ImsCommonService;
+namespace MantuTpService;
 
 use think\Model;
 use think\Db;
-use think\App;
 
 
 /**
+ * Class BaseModel
+ * @notes: tp5.1基础模型类
  * @version 1.0
  * @author: W_wang
- * @since: 2019/1/25 15:17
- * Class BaseModel 基类 model
- * @package app\index\model
+ * @email: 1352255400@qq.com
+ * @since: 2020/3/25 16:28
+ * @package MantuTpService
  */
 class BaseModel extends Model
 {
-
-    /*
-     * 初始化表名称
-     */
+    //初始化表名称
     public $table;
-    /*
-     * 初始化返回字段
-     */
+    //初始化返回字段
     public $fields;
-    /*
-     * 排序字段
-     */
+    //排序字段
     public $order;
-    /*
-     * 初始化返回sql标识0不返回，1返回
-     */
+    //初始化返回sql标识0不返回，1返回(debug模式下生效)
     public $isShowSql;
-    /*
-     * join 表
-     */
-    public $joinTable;
-    /*
-     * join 值
-     */
-    public $joinVal;
-    /*
-     * join 方式
-     */
-    public $joinType;
-    /*
-     * 引入缓存
-     */
+    //join 类型：数组（支持多表）
+    public $join;
+    //初始化缓存变量
     public $cache;
 
-    /**
-     * BaseModel constructor.
-     */
     public function __construct()
     {
         parent::__construct();
-        $this->joinType = 'left';
-        //检查版本5.0无需处理
-        $version = env('TP_VERSION', '51');
-        if ($version == 50) {
-            $this->cache = new Tp50CacheService();
-        } else {
-            $this->cache = new TpCacheService();
-        }
+        //实例化缓存
+        $this->cache = new CacheService();
     }
 
 
     /**
-     * @desc 基本检查
-     * @author W_wang
-     * @since 2019/1/25
+     * @baseCheck:基本检查
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:32
      * @return array
      */
     public function baseCheck()
     {
+        //检查表和字段
         if (empty($this->table) || empty($this->fields)) {
             return array('code' => '1000', 'data' => [], 'msg' => '请初始化数据表和字段！');
         }
+        //检查字段不能用*
         if (trim($this->fields) == '*') {
             return array('code' => '1000', 'data' => [], 'msg' => '请不要使用select *');
         }
@@ -86,11 +61,13 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 清空缓存
-     * @author W_wang
-     * @since 2019/1/25
-     * @param string $cacheKey
-     * @return mixed
+     * @clearCache:清空缓存
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:33
+     * @$cacheKey: 需要删除的主key
+     * @return bool
      */
     public function clearCache($cacheKey = '')
     {
@@ -100,29 +77,30 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 获取缓存key
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $data
+     * @getCacheKey:获取缓存主key（表+公司）
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:34
      * @return string
      */
     public function getCacheKey($data = array())
     {
-        //缓存字段初始化（表、公司、个人、id）
+        //缓存字段初始化（表、公司）
         $companyId = isset($data["company_id"]) ? $data["company_id"] : 0;
-        $memberId = isset($data["member_id"]) ? $data["member_id"] : 0;
-        $id = isset($data["cache_info_id"]) ? $data["cache_info_id"] : 0;
-        return $this->table . '_' . $companyId . '_' . $memberId . '_' . $id;
+        return $this->table . '_' . $companyId;
     }
 
 
     /**
-     * @desc 执行sql
-     * @author W_wang
-     * @since 2019/1/25
-     * @param string $sql
-     * @param int $cacheTime
-     * @return array|mixed
+     * @query:执行sql
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:36
+     * @$sql: sql语句
+     * $cacheTime: 缓存时间
+     * @return array
      */
     public function query($sql = '', $cacheTime = 7200)
     {
@@ -144,7 +122,7 @@ class BaseModel extends Model
                 return array('code' => '000', 'data' => $cacheData["data"], 'msg' => 'ok');
             }
         }
-        //检查缓存是否存在 end        
+        //检查缓存是否存在 end
 
         $list = Db::query($sql);
         $data = array();
@@ -158,8 +136,9 @@ class BaseModel extends Model
             ), $cacheTime);
         }
 
+        //debug模型下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
-            return array('code' => '000', 'data' => $data, 'msg' => 'ok', 'sql' => Db::getLastSql());
+            return array('code' => '000', 'data' => $data, 'msg' => 'ok', 'sql' => $sql);
         }
         return array('code' => '000', 'data' => $data, 'msg' => 'ok');
 
@@ -167,16 +146,15 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 获取列表
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $where 条件
-     * @param int $getTotalType 是否返回总数
-     * @param int $cacheTime 缓存时间
+     * @getList:获取列表
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:38
+     * @$where: 所有条件语句
+     * @$getTotalType: 是否返回总数（分页）
+     * @$cacheTime: 缓存时间
      * @return array
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\ModelNotFoundException
-     * @throws \think\exception\DbException
      */
     public function getList($where = array(), $getTotalType = 0, $cacheTime = 7200)
     {
@@ -267,155 +245,38 @@ class BaseModel extends Model
 
         //查询
         //多表
-        if ($this->joinTable && $this->joinVal) {
-            if (!empty($whereChild)) {
-                //多表子查询
-                if ($pageSize == 0) {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                            $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                        })
-                        ->join($this->joinTable, $this->joinVal, $this->joinType)
-                        ->order($this->order)
-                        ->select();
-                } else {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                            $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                        })
-                        ->join($this->joinTable, $this->joinVal, $this->joinType)
-                        ->order($this->order)
-                        ->limit($limit)
-                        ->select();
+        $db = Db::table($this->table);
+        $db->field($this->fields);
+        if (!empty($where)) $db->where($where);
+        if (!empty($whereOr)) $db->whereOr($whereOr);
+        if (!empty($this->order)) $db->order($this->order);
+        if (!empty($whereChild)) {
+            //多表子查询
+            $db->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
+                $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
+            });
+        }
 
-                    //获取总数
-                    if ($getTotalType == 1 && $total == 0) {
-                        $total = Db::table($this->table)
-                            ->where($where)
-                            ->whereOr($whereOr)
-                            ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                                $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                            })
-                            ->join($this->joinTable, $this->joinVal, $this->joinType)
-                            ->count();
-                    }
-                }
-            } else {
-                // 多表没有子查询
-                if ($pageSize == 0) {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->join($this->joinTable, $this->joinVal, $this->joinType)
-                        ->order($this->order)
-                        ->select();
-                } else {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->join($this->joinTable, $this->joinVal, $this->joinType)
-                        ->order($this->order)
-                        ->limit($limit)
-                        ->select();
-
-                    //获取总数
-                    if ($getTotalType == 1 && $total == 0) {
-                        $total = Db::table($this->table)
-                            ->where($where)
-                            ->whereOr($whereOr)
-                            ->join($this->joinTable, $this->joinVal, $this->joinType)
-                            ->count();
-                    }
-                }
-            }
-        } else {
-            //单表
-            if (!empty($whereChild)) {
-                //单表子查询
-                if ($pageSize == 0) {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                            $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                        })
-                        ->order($this->order)
-                        ->select();
-                } else {
-                    // whereOr
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                            $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                        })
-                        ->order($this->order)
-                        ->limit($limit)
-                        ->select();
-
-                    //获取总数
-                    if ($getTotalType == 1 && $total == 0) {
-                        $total = Db::table($this->table)
-                            ->where($where)
-                            ->whereOr($whereOr)
-                            ->where($whereChild['field_main'], $whereChild['type'], function ($query) use ($whereChild) {
-                                $query->table($whereChild['table_name'])->where($whereChild['where'])->field($whereChild['fields']);
-                            })
-                            ->count();
-                    }
-                }
-            } else {
-                //单表没有子查询
-                if ($pageSize == 0) {
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->order($this->order)
-                        ->select();
-                } else {
-                    // whereOr
-                    $list = Db::table($this->table)
-                        ->field($this->fields)
-                        ->where($where)
-                        ->whereOr($whereOr)
-                        ->order($this->order)
-                        ->limit($limit)
-                        ->select();
-
-                    //获取总数
-                    if ($getTotalType == 1 && $total == 0) {
-                        $total = Db::table($this->table)
-                            ->where($where)
-                            ->whereOr($whereOr)
-                            ->count();
-                    }
-                }
+        //join
+        $join = $this->join;
+        if (!empty($join)) {
+            foreach ($join as $v) {
+                $db->join($v['table'], $v['value'], $v['type']);
             }
         }
 
-        //格式化时间
-        if (!empty($list) && isset($list[0]['time_add'])) {
-            foreach ($list as $k => &$v) {
-                if (isset($v['time_add']) && is_numeric($v['time_add'])) {
-                    $v['time_add_date'] = date('Y-m-d H:i', $v['time_add']);
-                }
-                if (isset($v['time_update']) && is_numeric($v['time_update'])) {
-                    $v['time_update_date'] = date('Y-m-d H:i', $v['time_update']);
-                }
-            }
+        //分页
+        if ($pageSize > 0) $db->limit($limit);
+
+        //返回结果
+        $list = $db->select();
+
+        //获取总数
+        if ($getTotalType == 1 && $total == 0) {
+            $total = $db->count();
         }
 
+        //整理数据
         $data = array();
         $data['list'] = $list;
         $total_page = $pageSize > 0 ? ceil($total / $pageSize) : 1;
@@ -439,6 +300,7 @@ class BaseModel extends Model
                 "data" => $total
             ), $cacheTime);
         }
+        //debug模型下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
             return array('code' => '000', 'data' => $data, 'msg' => 'ok', 'sql' => Db::getLastSql());
         }
@@ -448,10 +310,11 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 新增
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $data
+     * @add:新增
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:48
      * @return array
      */
     public function add($data = array())
@@ -467,7 +330,7 @@ class BaseModel extends Model
             return array('code' => '1000', 'data' => [], 'msg' => 'insert data is null ！');
         }
 
-        //检查重复提交
+        //检查重复提交（5秒）
         ksort($data);
         $arrCache = array();
         foreach ($data as $k => $v) {
@@ -498,7 +361,7 @@ class BaseModel extends Model
         $dataCache = array();
         $cacheKey = $this->getCacheKey($dataCache);
         $this->clearCache($cacheKey);
-
+        //debug模型下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
             return array('code' => '000', 'data' => ['id' => $addId], 'msg' => '新增成功！', 'sql' => Db::getLastSql());
         }
@@ -507,10 +370,11 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 批量新增
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $data
+     * @addAll:批量新增
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:50
      * @return array
      */
     public function addAll($data = array())
@@ -541,7 +405,7 @@ class BaseModel extends Model
         $dataCache = array();
         $cacheKey = $this->getCacheKey($dataCache);
         $this->clearCache($cacheKey);
-
+        //debug模式下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
             return array('code' => '000', 'data' => [], 'msg' => '批量新增成功！', 'sql' => Db::getLastSql());
         }
@@ -550,11 +414,11 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 编辑
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $data
-     * @param array $where
+     * @edit:编辑
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:51
      * @return array
      */
     public function edit($data = array(), $where = array())
@@ -585,7 +449,9 @@ class BaseModel extends Model
             return array('code' => '1000', 'data' => ['e' => $e], 'msg' => '编辑异常', 'edit_data' => $data);
         }
 
+        //修改失败
         if (empty($re)) {
+            //debug模式下返回sql语句
             if ($this->isShowSql == 1 && config('app_debug') == true) {
                 return array('code' => '1000', 'data' => [], 'msg' => 'update data is error ！', 'sql' => Db::getLastSql());
             }
@@ -596,7 +462,7 @@ class BaseModel extends Model
         $dataCache = array();
         $cacheKey = $this->getCacheKey($dataCache);
         $this->clearCache($cacheKey);
-
+        //debug模式下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
             return array('code' => '000', 'data' => [], 'msg' => '编辑成功！', 'sql' => Db::getLastSql());
         }
@@ -605,11 +471,11 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 删除
-     * @author W_wang
-     * @since 2019/1/25
-     * @param array $where
-     * @param int $limit
+     * @del:删除
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:52
      * @return array
      */
     public function del($where = array(), $limit = 0)
@@ -636,6 +502,7 @@ class BaseModel extends Model
         }
 
         if (empty($re)) {
+            //debug模式下返回sql语句
             if ($this->isShowSql == 1 && config('app_debug') == true) {
                 return array('code' => '1000', 'data' => [], 'msg' => 'delete data is error ！', 'sql' => Db::getLastSql());
             }
@@ -646,7 +513,7 @@ class BaseModel extends Model
         $dataCache = array();
         $cacheKey = $this->getCacheKey($dataCache);
         $this->clearCache($cacheKey);
-
+        //debug模式下返回sql语句
         if ($this->isShowSql == 1 && config('app_debug') == true) {
             return array('code' => '000', 'data' => [], 'msg' => '删除成功！', 'sql' => Db::getLastSql());
         }
@@ -655,11 +522,12 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 获取表字段
-     * @author W_wang
-     * @since 2019/1/25
-     * @param int $type
-     * @return array|string
+     * @getTableFields: 获取表字段
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:52
+     * @return string
      */
     public function getTableFields($type = 0)
     {
@@ -679,20 +547,15 @@ class BaseModel extends Model
 
 
     /**
-     * @desc 格式化where條件(兼容tp5写法)
-     * @author W_wang
-     * @since 2019/8/1
-     * @param array $where
+     * @initWhere:格式化where條件(兼容tp5写法：升级)
+     * @version: 1.0
+     * @author: W_wang
+     * @email: 1352255400@qq.com
+     * @since: 2020/3/25 16:53
      * @return array
      */
     private function initWhere($where = [])
     {
-        //检查版本5.0无需处理
-        $version = env('TP_VERSION', '51');
-        if ($version == 50) {
-            return $where;
-        }
-
         if (!empty($where)) {
             $whereTmp = array();
             foreach ($where as $k => $v) {
@@ -706,7 +569,4 @@ class BaseModel extends Model
         }
         return $where;
     }
-
-
 }
-
